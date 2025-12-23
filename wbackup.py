@@ -149,23 +149,70 @@ class BackupThread(QtCore.QThread):
 
                 if p.returncode != 0:
                     raise RuntimeError(f"Remote backup failed for host {host}")
-
-            # === 5. Repository synchronization (rsync as transport layer) ===
-            self.progress.emit("Synchronizing repositories…", 90)
-
+            # === 5. Repository synchronization over network ===
+            self.progress.emit("Synchronizing backup repositories…", 90)
+            
+            BASE = BASE_BACKUP_DIR  # ~/backup
+            
+            # --------------------------------------------------
+            # 1. Laptop ↔ Home
+            # --------------------------------------------------
+            self.progress.emit("Sync: laptop ↔ home", 91)
+            
+            # 1.1 Laptop -> Home (laptop repo is authoritative)
             subprocess.run([
                 "rsync", "-avz", "--delete",
-                os.path.join(BASE_BACKUP_DIR, "laptop") + "/",
-                "user@HOME_PUBLIC_HOST:" + os.path.join(BASE_BACKUP_DIR, "laptop") + "/",
-            ])
-
+                os.path.join(BASE, "laptop") + "/",
+                f"user@HOME_PUBLIC_HOST:{os.path.join(BASE, 'laptop')}/"
+            ], check=True)
+            
+            # 1.2 Home -> Laptop (home repo is authoritative)
             subprocess.run([
                 "rsync", "-avz", "--delete",
-                "user@SERVER_PUBLIC_HOST:" + os.path.join(BASE_BACKUP_DIR, "server") + "/",
-                os.path.join(BASE_BACKUP_DIR, "server") + "/",
-            ])
+                f"user@HOME_PUBLIC_HOST:{os.path.join(BASE, 'home')}/",
+                os.path.join(BASE, "home") + "/"
+            ], check=True)
+            
+            # --------------------------------------------------
+            # 2. Laptop ↔ Server
+            # --------------------------------------------------
+            self.progress.emit("Sync: laptop ↔ server", 94)
+            
+            # 2.1 Server -> Laptop (server repo is authoritative)
+            subprocess.run([
+                "rsync", "-avz", "--delete",
+                f"user@SERVER_PUBLIC_HOST:{os.path.join(BASE, 'server')}/",
+                os.path.join(BASE, "server") + "/"
+            ], check=True)
+            
+            # 2.2 Laptop -> Server (laptop repo is authoritative)
+            subprocess.run([
+                "rsync", "-avz", "--delete",
+                os.path.join(BASE, "laptop") + "/",
+                f"user@SERVER_PUBLIC_HOST:{os.path.join(BASE, 'laptop')}/"
+            ], check=True)
+            
+            # 2.3 Laptop -> Server (home repo, already synchronized)
+            subprocess.run([
+                "rsync", "-avz", "--delete",
+                os.path.join(BASE, "home") + "/",
+                f"user@SERVER_PUBLIC_HOST:{os.path.join(BASE, 'home')}/"
+            ], check=True)
+            
+            # --------------------------------------------------
+            # 3. Final pass: Server repo -> Home
+            # --------------------------------------------------
+            self.progress.emit("Sync: server → home", 97)
+            
+            # 3.1 Laptop -> Home (server repo is authoritative)
+            subprocess.run([
+                "rsync", "-avz", "--delete",
+                os.path.join(BASE, "server") + "/",
+                f"user@HOME_PUBLIC_HOST:{os.path.join(BASE, 'server')}/"
+            ], check=True)
+            
+            self.done.emit("✅ Backup and synchronization completed successfully.")
 
-            self.done.emit("Backup and synchronization completed successfully.")
 
         except Exception as e:
             self.failed.emit(str(e))
