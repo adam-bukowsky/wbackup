@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Backup Orchestrator
+Comment=Personal backup orchestration tool (restic + rsync)
+
+# Adjust Exec and Icon paths before use
+Exec=python3 /path/to/backup_app.py
+Icon=/path/to/assets/icon.png
+
+Terminal=false
+Categories=Utility;System;
