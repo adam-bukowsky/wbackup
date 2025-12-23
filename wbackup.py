@@ -149,6 +149,8 @@ class BackupThread(QtCore.QThread):
 
                 if p.returncode != 0:
                     raise RuntimeError(f"Remote backup failed for host {host}")
+
+            
             # === 5. Repository synchronization over network ===
             self.progress.emit("Synchronizing backup repositories…", 90)
             
