@@ -1,0 +1,14 @@
+backup:
+  nodes:
+    - name: laptop
+      type: local
+      path: /path/to/laptop/backup
+    - name: home
+      type: local
+      path: /path/to/home/backup
+    - name: server
+      type: remote
+      path: /path/to/server/backup
+      ssh_host: user@server_ip
+      ssh_port: 22
+      ssh_key: /path/to/ssh/key
